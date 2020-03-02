@@ -2,50 +2,51 @@
 #include <string>
 #include <fstream>
 #include <cstring>
-#include <mutex>
 #include <thread>
+#include <semaphore.h>
 #include <stdatomic.h>
 #include "util.h"
-using namespace std;
 
 #define BUFF_SIZE 10
 size_t str_size = 30;
-string buffer[BUFF_SIZE];
+std::string buffer[BUFF_SIZE];
 
 std::atomic<bool> producer_complete(false);
-std::mutex mtx;
 
 bool activeParser = false;
 
 
 static int item_count = 0;
 
+sem_t *mutex;
+sem_t *spaces_avl;
+sem_t *spaces_fld;
+
 
 void parse() {
-	int i = 0;
 	int in = 0;
 	for (int n = 1; n < 6; n++) {
-		ifstream file("input/names" + to_string(n) + ".txt");
-		string line;
+		std::ifstream file("input/names" + std::to_string(n) + ".txt");
+		std::string line;
 
 		
 		if (!file) {
-			cerr << "File Error" << endl; 
+			std::cerr << "File Error" << std::endl; 
 			exit(1);
 		}
-		while (getline(file, line)) {
+		while (std::getline(file, line)) {
 
 			if (line != "\n") {
 				// cout << line << endl;
 				while (item_count == BUFF_SIZE);
 				
-				mtx.lock();
+				sem_wait(mutex);
 				/* ------ CS ------- */
 				buffer[in] = line;
 				item_count++;
 				/* ----- END ------- */
 				
-				mtx.unlock();
+				sem_post(mutex);
 				in = (in + 1) % BUFF_SIZE;
 			}
 		}
@@ -57,44 +58,48 @@ void parse() {
 
 void convert() {
 	int out = 0;
-	ofstream file("outfile.txt");
-	if (file){
-		string to_convert;
-		char converted[30];
-		while (!producer_complete || item_count > 0)
-		{	
-			while(item_count == 0);
+	std::string to_convert;
+	char converted[30];
+	while (!producer_complete || item_count > 0)
+	{	
+		while(item_count == 0);
 			
-			mtx.lock();
-			/* ------ CS ------- */
-			to_convert = buffer[out];
-			item_count--;
-			/* ----- END ------- */
-			mtx.unlock();
+		sem_wait(mutex);
+		/* ------ CS ------- */
+		to_convert = buffer[out];
+		item_count--;
+		/* ----- END ------- */
+		sem_post(mutex);
 
-			//cout << to_convert << endl;
+		//cout << to_convert << endl;
 			
-			out = (out + 1) % BUFF_SIZE;
+		out = (out + 1) % BUFF_SIZE;
 
-			if (dnslookup(to_convert.c_str(), converted, 30) == -1) {
-				cerr << "Unable to resolve domain name " << to_convert << endl;
-				file << to_convert << ", " << endl;
-			} else 
-				file << to_convert << ", " << string(converted) << endl;
+		if (dnslookup(to_convert.c_str(), converted, 30) == -1) {
+			std::cerr << "Unable to resolve domain name " << to_convert << std::endl;
+			std::cout << to_convert << ", " << std::endl;
+		} else 
+			std::cout << to_convert << ", " << std::string(converted) << std::endl;
 
-		}
-		file.close();
 	}
 
 }
 
+void Sem_Open(sem_t *sem, std::string name, int count){
+	if ((sem = sem_open(name.c_str(), O_CREAT, 0644, count)) == SEM_FAILED) {
+		perror("sem_open");
+		exit(EXIT_FAILURE);
+	}
+}
+
 int main(){
-	thread producer(parse);
-	thread consumer(convert);
+	Sem_Open(mutex, "/mutex", 1);
+	std::thread producer(parse);
+	std::thread consumer(convert);
 	producer.join();
 	consumer.join();
-	cout << "Threads Joined" << endl;
-	cout << "item_count: " << item_count << endl;
+	std::cout << "Threads Joined" << std::endl;
+	std::cout << "item_count: " << item_count << std::endl;
 	return 0;
 }
 

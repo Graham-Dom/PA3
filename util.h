@@ -28,8 +28,13 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+
 #define UTIL_FAILURE -1
 #define UTIL_SUCCESS 0
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Fuction to return the first IP address found
  * for hostname. IP address returned as string
@@ -39,4 +44,8 @@ int dnslookup(const char* hostname,
 	      char* firstIPstr,
 	      int maxSize);
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
