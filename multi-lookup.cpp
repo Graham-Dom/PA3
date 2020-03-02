@@ -37,43 +37,51 @@ void parse() {
 		while (std::getline(file, line)) {
 
 			if (line != "\n") {
-				// cout << line << endl;
-				while (item_count == BUFF_SIZE);
+				//std::cout << "Read " << line << std::endl;
+
+				sem_wait(spaces_avl);
 				
 				sem_wait(mutex);
 				/* ------ CS ------- */
 				buffer[in] = line;
 				item_count++;
+				in = (in + 1) % BUFF_SIZE;
 				/* ----- END ------- */
 				
 				sem_post(mutex);
-				in = (in + 1) % BUFF_SIZE;
+				
+
+				sem_post(spaces_fld);
 			}
 		}
-		producer_complete = true;
 
 		file.close();
 	}
+
+	producer_complete = true;
 }
 
 void convert() {
 	int out = 0;
 	std::string to_convert;
 	char converted[30];
-	while (!producer_complete || item_count > 0)
+	while (!producer_complete || item_count)
 	{	
-		while(item_count == 0);
+		sem_wait(spaces_fld);
 			
 		sem_wait(mutex);
 		/* ------ CS ------- */
 		to_convert = buffer[out];
 		item_count--;
+		out = (out + 1) % BUFF_SIZE;
 		/* ----- END ------- */
 		sem_post(mutex);
 
-		//cout << to_convert << endl;
+		sem_post(spaces_avl);
+
+		//std::cout << "write " << to_convert << std::endl;
 			
-		out = (out + 1) % BUFF_SIZE;
+		
 
 		if (dnslookup(to_convert.c_str(), converted, 30) == -1) {
 			std::cerr << "Unable to resolve domain name " << to_convert << std::endl;
@@ -82,24 +90,37 @@ void convert() {
 			std::cout << to_convert << ", " << std::string(converted) << std::endl;
 
 	}
+	//std::cout << "consumer complete" << std::endl;
 
 }
 
-void Sem_Open(sem_t *sem, std::string name, int count){
-	if ((sem = sem_open(name.c_str(), O_CREAT, 0644, count)) == SEM_FAILED) {
+void Sem_Open(sem_t* &sem, std::string name, int num){
+	if ((sem = sem_open(name.c_str(), O_CREAT | O_EXCL, 0644, num)) == SEM_FAILED) {
 		perror("sem_open");
 		exit(EXIT_FAILURE);
 	}
 }
 
 int main(){
+
+	sem_unlink("/mutex");
+	sem_unlink("/avail");
+	sem_unlink("/filled");
+
 	Sem_Open(mutex, "/mutex", 1);
+	Sem_Open(spaces_avl, "/avail", BUFF_SIZE);
+	Sem_Open(spaces_fld, "/filled", 0);
+
 	std::thread producer(parse);
 	std::thread consumer(convert);
 	producer.join();
 	consumer.join();
 	std::cout << "Threads Joined" << std::endl;
 	std::cout << "item_count: " << item_count << std::endl;
+
+	sem_unlink("/mutex");
+	sem_unlink("/avail");
+	sem_unlink("/filled");
 	return 0;
 }
 
