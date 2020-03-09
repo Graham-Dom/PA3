@@ -4,10 +4,10 @@
 #include <cstring>
 #include <thread>
 #include <semaphore.h>
-#include <stdatomic.h>
 #include <vector>
 #include <sys/time.h>
 #include <iomanip> 
+#include <fcntl.h>
 #include "util.h"
 #include "FileHandler.h"
 using namespace std;
@@ -16,7 +16,7 @@ using namespace std;
 
 string buffer[BUFF_SIZE];
 
-static atomic<bool> producer_complete(false);
+static bool producers_complete(false);
 static int item_count = 0;
 static int num_prods;
 static int num_cons;
@@ -31,7 +31,6 @@ sem_t *plog_mtx;
 
 void parse(int threadnum, ofstream* producer_log, FileHandler *handler) {
 	static int in = 0;
-	static int complete = 0;
 
 	string line;
 	while ((line  = (*handler).getLine()) != "") {
@@ -55,9 +54,7 @@ void parse(int threadnum, ofstream* producer_log, FileHandler *handler) {
 		sem_post(spaces_fld);
 		
 	}
-	complete++;
-	if (complete == num_prods)
-		producer_complete = true;
+	producers_complete = true;
 }
 
 
@@ -65,7 +62,7 @@ void convert(ofstream* conversion_log) {
 	static int out = 0;
 	string to_convert;
 	char converted[30];
-	while (!producer_complete || item_count)
+	while (!producers_complete || item_count)
 	{	
 		sem_wait(spaces_fld);
 			

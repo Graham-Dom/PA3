@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <semaphore.h>
+#include <fcntl.h>
 
 #ifndef FILEHANDLER_H
 #define FILEHANDLER_H
