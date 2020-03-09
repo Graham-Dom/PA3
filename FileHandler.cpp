@@ -31,5 +31,4 @@ string FileHandler::getLine(void) {
 
 	sem_post(mtx);
 	return "";
-	current_file++;
 }
