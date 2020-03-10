@@ -133,13 +133,13 @@ int main(int argc, char *argv[]){
 		exit(EXIT_FAILURE);
 	}
 
-	ofstream producer_log = ofstream(argv[3]);
+	ofstream producer_log = ofstream(argv[3], ios::in | ios::out);
 	if (!producer_log) {
 		cerr << "Cannot open " << argv[3] << " - aborting..." << endl;
 		exit(EXIT_FAILURE);
 	}
 	
-	ofstream conversion_log = ofstream(argv[4], std::ios::in | std::ios::trunc);
+	ofstream conversion_log = ofstream(argv[4], ios::in | ios::out);
 	if (!conversion_log) {
 		cerr << "Cannot open " << argv[4] << " - aborting..." << endl;
 		exit(EXIT_FAILURE);
