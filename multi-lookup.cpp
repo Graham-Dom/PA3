@@ -1,33 +1,5 @@
-#include <iostream>
-#include <string>
-#include <fstream>
-#include <cstring>
-#include <thread>
-#include <semaphore.h>
-#include <vector>
-#include <sys/time.h>
-#include <iomanip> 
-#include <fcntl.h>
-#include "util.h"
-#include "FileHandler.h"
+#include "multi-lookup.h"
 using namespace std;
-
-#define BUFF_SIZE 10
-
-string buffer[BUFF_SIZE];
-
-static bool producers_complete(false);
-static int item_count = 0;
-static int num_prods;
-static int num_cons;
-
-
-sem_t *mtx;
-sem_t *spaces_avl;
-sem_t *spaces_fld;
-sem_t *outfile_mtx;
-sem_t *plog_mtx; 
-
 
 void parse(int threadnum, ofstream* producer_log, FileHandler *handler) {
 	static int in = 0;
